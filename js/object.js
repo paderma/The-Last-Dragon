@@ -42,6 +42,9 @@ battle.Object = function () {
     this.cooldown = false;
     this.cooldownElapsed = 0;
     this.cooldownDelay = 200;
+    
+    this.isWaitingToAttack = false;
+    this.hasExecuteCallback = false;
 }
 
 battle.Object.states = {
@@ -53,7 +56,6 @@ var proto = battle.Object.prototype;
 
 proto.update = function (elapsed, engine) {
 
-    //this.isWaitingToAttack = false;
     this.updateStates(elapsed);
 
     if (this.animated) {
@@ -105,8 +107,9 @@ proto.nextStep = function() {
         if (this.hasNextStep()) {
             this.step += 1;
             this.updateMovement();
-        } else if (this.stop_pathing_callback){
+        } else if (this.stop_pathing_callback) {
             this.stop_pathing_callback();
+            this.stopMoving();
         } else {
             this.stopMoving();
         }
@@ -119,8 +122,6 @@ proto.isMoving = function () {
 
 proto.stopMoving = function () {
     this.path = null;
-    this.addState(battle.Object.states.IDLE);
-    //this.isWaitingToAttack = true;
 };
 
 proto.updatePositionOnGrid = function() {
@@ -254,6 +255,9 @@ proto.removeStateById = function (id) {
 };
 
 proto.getDirectionTo = function (target) {
+    if (target === null) {
+        return null;
+    }
     if (this.gridX === target.gridX) {
         if (this.gridY < target.gridY) {
             return battle.directions.DOWN;
@@ -284,6 +288,9 @@ proto.isNear = function (target, distance) {
 };
 
 proto.canAttack = function (target) {
+    if (target === null) {
+        return false;
+    }
     var direction = this.getDirectionTo(target);
     var isNear = this.isNear(target, this.attackRange);
     return (this.team !== target.team && !this.cooldown && direction !== null && isNear);
@@ -298,12 +305,12 @@ proto.chaseThenFire = function (target, engine) {
     this.onStopPathing(function () {
         if (this.isNear(target, this.attackRange)) {
             var direction = this.getDirectionTo(target);
-            console.log(direction);
-            if (direction !== false) {
+            if (direction !== null) {
                 engine.objectAttack(this, direction);
             }
         }
         this.stopMoving();
+        this.addState(battle.Object.states.IDLE);
     });
 };
 

@@ -121,7 +121,7 @@ proto.initObjectGrid = function() {
     for (var y = 0; y < height; y++) {
         this.objectGrid[y] = [];
         for (var x = 0; x < width; x++) {
-            this.objectGrid[y][x] = "";
+            this.objectGrid[y][x] = null;
         }
     }
 };
@@ -261,18 +261,23 @@ proto.handleInput = function () {
 
     if (this.mouse.wasButtonClicked(buttons.LEFT)) {
         var mgp = this.getMouseGridPosition();
-        var obj = this.getObjectAt(mgp.x, mgp.y);
-        if (obj) {
-            if (obj.role === "dragon") {
-                var path = this.pathManager.getMoveRange(this.map, player);
-                this.updatePathingGrid(path);
-            } else if (player.canAttack(obj)) {
+        if (player.isWaitingToAttack === true) {
+            player.isWaitingToAttack = false;
+            var obj = this.getObjectAt(mgp.x, mgp.y);
+            if (player.canAttack(obj)) {
                 var direction = player.getDirectionTo(obj);
                 this.objectAttack(player, direction);
             }
+            player.addState(battle.Object.states.IDLE);
+        } else if (mgp.x === player.gridX && mgp.y === player.gridY) {
+            var path = this.pathManager.getMoveRange(this.map, player);
+            this.updatePathingGrid(path);
         } else if (this.isPathAt(mgp.x, mgp.y)) {
             var path = this.findPath(player, mgp.x, mgp.y);
             player.followPath(path);
+            player.onStopPathing(function () {
+                this.isWaitingToAttack = true;
+            });
         }
     }
 
