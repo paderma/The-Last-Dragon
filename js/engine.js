@@ -22,6 +22,7 @@ var proto = battle.Engine.prototype;
 
 proto.run = function () {
     this.init();
+    this.state = "running";
     this.lastUpdate = battle.now();
     var that = this;
     (function gameloop() {
@@ -39,6 +40,7 @@ proto.init = function () {
         "dragon": "img/dragon.png",
         "bear": "img/bear.png",
         "monster": "img/monster.png",
+        "skull": "img/skull.png",
         "fireball": "img/fireball.png",
         "target": "img/target.png",
         "explosion": "img/explosion.png"
@@ -59,10 +61,15 @@ proto.initPlayer = function () {
 proto.initEnemy = function() {
     var bear = battle.makeObject("bear");
     bear.setGridPosition(5, 5);
-    this.addObject(bear, ENEMY_TEAM);
+    this.addObject(bear);
+
+    var skull = battle.makeObject("skull");
+    skull.setGridPosition(14, 3);
+    this.addObject(skull);
+
     var monster = battle.makeObject("monster");
     monster.setGridPosition(25, 5);
-    this.addObject(monster, ENEMY_TEAM);
+    this.addObject(monster);
 };
 
 proto.initMap = function () {
@@ -176,22 +183,28 @@ proto.update = function () {
     var now = battle.now();
     var elapsed = now - this.lastUpdate;
     this.lastUpdate = now;
-
     this.lastTurn = this.currentTurn;
-    if (this.currentTurn === PLAYER_TEAM) {
-        this.handleInput();
-    } else if (this.currentTurn === ENEMY_TEAM) {
-        var obj = this.getActiveMembers(ENEMY_TEAM)[0];
-        if ( obj && !obj.isMoving()) {
-            var player = this.getPlayerObject();
-            obj.chaseThenFire(player, this);
-        }
-    }
-    this.updatePlayTurn();
 
-    this.updateObjects(elapsed, this);
-    var ctx = this.canvases["display"].getContext("2d");
-    this.render(ctx);
+    switch (this.state) {
+        case "running":
+            if (this.currentTurn === PLAYER_TEAM) {
+                this.handleInput();
+            } else if (this.currentTurn === ENEMY_TEAM) {
+                var obj = this.getActiveMembers(ENEMY_TEAM)[0];
+                if ( obj && !obj.isMoving()) {
+                    var player = this.getPlayerObject();
+                    obj.chaseThenFire(player, this);
+                }
+            }
+            this.updatePlayTurn();
+
+            this.updateObjects(elapsed, this);
+            this.render();
+            break;
+        case "game_over":
+            this.render();
+            break;
+    }
 };
 
 proto.updatePlayTurn = function () {
@@ -253,11 +266,9 @@ proto.handleInput = function () {
             if (obj.role === "dragon") {
                 var path = this.pathManager.getMoveRange(this.map, player);
                 this.updatePathingGrid(path);
-            } else if (obj.team !== player.team) {
+            } else if (player.canAttack(obj)) {
                 var direction = player.getDirectionTo(obj);
-                if (direction) {
-                    this.objectAttack(player, direction);
-                }
+                this.objectAttack(player, direction);
             }
         } else if (this.isPathAt(mgp.x, mgp.y)) {
             var path = this.findPath(player, mgp.x, mgp.y);
@@ -295,7 +306,7 @@ proto.updateObjects = function (elapsed, engine) {
         var o = this.objects[x];
         if (o.isDead()) {
             if (o.role == "dragon") {
-                this.state = "over";
+                this.state = "game_over";
                 break;
             }
             this.removeObject(o);
@@ -336,11 +347,25 @@ proto.getMouseGridPosition = function () {
     };
 };
 
-proto.render = function (ctx) {
+proto.render = function () {
+
+    var ctx = this.canvases["display"].getContext("2d");
+
+    switch (this.state) {
+        case "running":
+            this.drawFloor(ctx);
+            this.drawPathingCells(ctx);
+            this.drawCursor(ctx);
+            this.drawObjects(ctx);
+            break;
+        case "game_over":
+            this.drawGameOver(ctx);
+            break;
+    }
+};
+
+proto.drawGameOver = function (ctx) {
     this.drawFloor(ctx);
-    this.drawPathingCells(ctx);
-    this.drawCursor(ctx);
-    this.drawObjects(ctx);
 };
 
 proto.drawCursor = function (ctx) {

@@ -11,6 +11,7 @@ o.dragon = {
     spriteSheet: "dragon",
     animated: true,
     weapons: ["fireball"],
+    hitPoints: 3,
     moveRange: 5 
 };
 
@@ -21,7 +22,7 @@ o.bear = {
     spriteSheet: "bear",
     animated: true,
     weapons: ["fireball"],
-    moveRange: 5 
+    moveRange: 3
 };
 
 o.monster = {
@@ -31,8 +32,18 @@ o.monster = {
     spriteSheet: "monster",
     animated: true,
     weapons: ["fireball"],
-    moveRange: 5 
+    moveRange: 4 
 };
+
+o.skull = {
+    role: "skull",
+    type: "character",
+    team: 2,
+    spriteSheet: "skull",
+    animated: true,
+    weapons: ["fireball"],
+    moveRange: 6
+}
 
 o.fireball = {
     role: "fireball",

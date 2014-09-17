@@ -17,11 +17,12 @@ battle.Object = function () {
     this.flipSpriteX = false;
     this.size = new battle.Size(32, 32);
 
-    this.moveRange = 2;
+    this.moveRange = 3;
     this.path = null;
     this.step = -1;
     this.states = [];
 
+    this.attackRange = 3;
     this.damage = 1;
     this.hitPoints = 3;
     this.wounds = 0;
@@ -52,6 +53,7 @@ var proto = battle.Object.prototype;
 
 proto.update = function (elapsed, engine) {
 
+    //this.isWaitingToAttack = false;
     this.updateStates(elapsed);
 
     if (this.animated) {
@@ -118,6 +120,7 @@ proto.isMoving = function () {
 proto.stopMoving = function () {
     this.path = null;
     this.addState(battle.Object.states.IDLE);
+    //this.isWaitingToAttack = true;
 };
 
 proto.updatePositionOnGrid = function() {
@@ -264,7 +267,7 @@ proto.getDirectionTo = function (target) {
             return battle.directions.LEFT;
         }
     } else {
-        return false;
+        return null;
     }
 };
 
@@ -280,6 +283,12 @@ proto.isNear = function (target, distance) {
     return near;
 };
 
+proto.canAttack = function (target) {
+    var direction = this.getDirectionTo(target);
+    var isNear = this.isNear(target, this.attackRange);
+    return (this.team !== target.team && !this.cooldown && direction !== null && isNear);
+};
+
 proto.chaseThenFire = function (target, engine) {
     var moveRange = engine.pathManager.getMoveRange(engine.map, this);
     engine.updatePathingGrid(moveRange);
@@ -287,7 +296,7 @@ proto.chaseThenFire = function (target, engine) {
     var chasePath = engine.findPath(this, target.gridX, target.gridY).slice(0, this.moveRange);
     this.followPath(chasePath);
     this.onStopPathing(function () {
-        if (this.isNear(target, 5)) {
+        if (this.isNear(target, this.attackRange)) {
             var direction = this.getDirectionTo(target);
             console.log(direction);
             if (direction !== false) {
